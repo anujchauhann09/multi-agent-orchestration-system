@@ -62,6 +62,9 @@ ormsgpack==1.12.2
 packaging==26.0
 passlib==1.7.4
 pgvector==0.4.2
+pinecone==8.1.2
+pinecone-plugin-assistant==3.0.3
+pinecone-plugin-interface==0.0.7
 pluggy==1.6.0
 prometheus_client==0.24.1
 prompt_toolkit==3.0.52

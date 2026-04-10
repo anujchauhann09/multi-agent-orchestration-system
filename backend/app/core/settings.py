@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # Agent limits
     MAX_RETRIES: int = 2
     MAX_AGENT_STEPS: int = 5
+    MAX_CONTEXT_TOKENS: int = 6000
+
+    # API security
+    API_KEY: str = ""  # set in .env
 
     class Config:
         env_file = ".env"

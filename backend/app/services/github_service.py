@@ -1,8 +1,13 @@
+import json
+import hashlib
+import redis as redis_lib
 from typing import Optional
 from github import Github, GithubException
 from app.core.settings import settings
 
 _github = Github(settings.GITHUB_TOKEN)
+_cache = redis_lib.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+_REPO_CACHE_TTL = 60 * 60 * 6  # 6 hours
 
 
 def _parse_repo(repo_url: str):
@@ -51,6 +56,34 @@ def get_repo_files(repo_url: str, extensions: tuple = (".py",)) -> list[dict]:
             except Exception:
                 continue
 
+    return files
+
+
+def get_latest_commit_sha(repo_url: str, branch: str = "main") -> str:
+    """Get the latest commit SHA for a branch — used as cache key."""
+    repo = _parse_repo(repo_url)
+    return repo.get_branch(branch).commit.sha
+
+
+def get_repo_files_cached(repo_url: str, extensions: tuple = (".py",)) -> list[dict]:
+    """
+    Fetch repo files with Redis caching keyed by repo URL + latest commit SHA.
+
+    Cache hit  → return files instantly, zero GitHub API file calls.
+    Cache miss → fetch from GitHub, store in Redis for 6 hours.
+
+    This means two tasks on the same repo at the same commit share one fetch.
+    Cache is automatically invalidated when a new commit is pushed (SHA changes).
+    """
+    sha = get_latest_commit_sha(repo_url)
+    cache_key = f"repo:files:{hashlib.sha256(f'{repo_url}:{sha}'.encode()).hexdigest()}"
+
+    cached = _cache.get(cache_key)
+    if cached:
+        return json.loads(cached)
+
+    files = get_repo_files(repo_url, extensions)
+    _cache.setex(cache_key, _REPO_CACHE_TTL, json.dumps(files))
     return files
 
 

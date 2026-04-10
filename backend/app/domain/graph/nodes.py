@@ -48,8 +48,8 @@ def node_read_code(state: dict) -> dict:
         log_repo.info(ws.task_id, "Fetching and indexing repo files")
         db.commit()
 
-        # Fetch all repo files (deterministic)
-        files = github_service.get_repo_files(ws.repo_url)
+        # Fetch all repo files — cached by repo URL + commit SHA
+        files = github_service.get_repo_files_cached(ws.repo_url)
         ws.repo_files = files
 
         # Index all files into Pinecone for vector search
@@ -143,7 +143,7 @@ def node_create_pr(state: dict) -> dict:
         log_repo.info(ws.task_id, "Creating PR on GitHub")
         db.commit()
 
-        branch = f"agent/fix-task-{ws.task_id}"
+        branch = f"agent/fix-task-{ws.task_id}-r{ws.retry_count}-{int(__import__('time').time())}"
         for file_path, content in (ws.generated_code or {}).items():
             github_service.create_branch_and_commit(
                 ws.repo_url, branch, file_path, content,

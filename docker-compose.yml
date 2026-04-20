@@ -24,6 +24,16 @@ services:
     ports:
       - "6379:6379"
 
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: multiagent_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
   backend:
     build:
       context: ./backend
